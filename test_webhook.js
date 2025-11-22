@@ -1,8 +1,8 @@
 const axios = require('axios');
 const crypto = require('crypto');
 
-const SECRET = 'test_secret';
-const URL = 'http://localhost:3009/hook';
+const SECRET = 'm!n0health-a!-slack-g!thub-webh00k-b0t';
+const URL = 'https://monitoring.minohealth.ai/github/hook';
 
 const createSignature = (body) => {
     const hmac = crypto.createHmac('sha256', SECRET);
@@ -34,22 +34,22 @@ const runTests = async () => {
     //     sender: { login: 'tester' }
     // });
 
-    // // 2. Push
-    // await sendEvent('push', {
-    //     ref: 'refs/heads/main',
-    //     commits: [{ id: '1234567890', message: 'Fix bug', url: 'http://github.com/commit' }],
-    //     repository: { full_name: 'user/repo' },
-    //     sender: { login: 'tester' },
-    //     pusher: { name: 'tester' }
-    // });
-
-    // 3. Pull Request
-    await sendEvent('pull_request', {
-        action: 'opened',
-        pull_request: { title: 'New Feature', html_url: 'http://github.com/pr', state: 'open', body: 'Description' },
+    // 2. Push
+    await sendEvent('push', {
+        ref: 'refs/heads/main',
+        commits: [{ id: '1234567890', message: 'Fix bug', url: 'http://github.com/commit' }],
         repository: { full_name: 'user/repo' },
-        sender: { login: 'tester' }
+        sender: { login: 'tester' },
+        pusher: { name: 'tester' }
     });
+
+    // // 3. Pull Request
+    // await sendEvent('pull_request', {
+    //     action: 'opened',
+    //     pull_request: { title: 'New Feature', html_url: 'http://github.com/pr', state: 'open', body: 'Description' },
+    //     repository: { full_name: 'user/repo' },
+    //     sender: { login: 'tester' }
+    // });
 
     console.log('Done.');
 };

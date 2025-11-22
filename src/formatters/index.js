@@ -3,6 +3,7 @@ const push = require('./push');
 const pullRequest = require('./pull_request');
 const review = require('./review');
 const discussion = require('./discussion');
+const workflowRun = require('./workflow_run');
 
 const formatEvent = (eventType, payload) => {
     switch (eventType) {
@@ -16,6 +17,8 @@ const formatEvent = (eventType, payload) => {
             return review(payload);
         case 'discussion_comment':
             return discussion(payload);
+        case 'workflow_run':
+            return workflowRun(payload);
         default:
             return null;
     }
