@@ -1,0 +1,11 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3009:3009"
+    env_file:
+      - env.store
+    environment:
+      - PORT=3009
+    container_name: github-slack-hook-processor
+    restart: unless-stopped
