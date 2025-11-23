@@ -12,6 +12,7 @@ module.exports = (payload) => {
             `*Title:* <${pull_request.html_url}|${pull_request.title}>\n` +
             `*By:* ${sender.login}\n` +
             `*State:* ${pull_request.state}\n` +
-            (pull_request.body ? `>>> ${pull_request.body.substring(0, 200)}${pull_request.body.length > 200 ? '...' : ''}` : '')
+            (pull_request.body ? `>>> ${pull_request.body.substring(0, 200)}${pull_request.body.length > 200 ? '...' : ''}\n` : '') +
+            `<${pull_request.html_url}/files|View Files> | <${pull_request.html_url}|View PR>`
     };
 };
