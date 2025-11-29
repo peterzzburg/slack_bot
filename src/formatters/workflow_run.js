@@ -1,86 +1,109 @@
 module.exports = (payload) => {
-    const { action, workflow_run, repository, sender } = payload;
-    const { head_branch } = workflow_run;
+    try {
+        const { workflow_run, repository, sender } = payload;
 
-    // Filter branches: only allow release_**, newenv, and staging
-    const allowedBranches = ['newenv', 'staging'];
-    const isReleaseBranch = head_branch.startsWith('release_');
+        // Validate required fields
+        if (!workflow_run || !workflow_run.head_branch) {
+            console.log('[workflow_run] Missing required fields, skipping');
+            return null;
+        }
 
-    if (!allowedBranches.includes(head_branch) && !isReleaseBranch) {
-        return null;
-    }
+        const { head_branch } = workflow_run;
 
-    const status = workflow_run.status;
-    const conclusion = workflow_run.conclusion;
+        // Branch filtering with logging
+        const allowedBranches = ['newenv', 'staging'];
+        const isReleaseBranch = head_branch.startsWith('release_');
 
-    // Filter status: only allow in_progress and completed
-    const allowedStatuses = ['in_progress', 'completed'];
-    if (!allowedStatuses.includes(status)) {
-        return null;
-    }
+        if (!allowedBranches.includes(head_branch) && !isReleaseBranch) {
+            console.log(`[workflow_run] Filtered out branch: ${head_branch}`);
+            return null;
+        }
 
-    let color = '#808080'; // Default grey
-    if (conclusion === 'success') color = '#36a64f'; // Green
-    if (conclusion === 'failure') color = '#dc3545'; // Red
-    if (status === 'in_progress') color = '#2c7bb6'; // Blue
+        console.log(`[workflow_run] Processing branch: ${head_branch}`);
 
-    return {
-        attachments: [
-            {
-                color: color,
-                blocks: [
-                    {
-                        type: "section",
-                        text: {
-                            type: "mrkdwn",
-                            text: `*Workflow Run ${status === 'in_progress' ? 'Started' : 'Update'}*`
+        const status = workflow_run.status;
+        const conclusion = workflow_run.conclusion;
+
+        // Filter status: only allow in_progress and completed
+        const allowedStatuses = ['in_progress', 'completed'];
+        if (!allowedStatuses.includes(status)) {
+            console.log(`[workflow_run] Filtered out status: ${status}`);
+            return null;
+        }
+
+        // Determine color based on status/conclusion
+        let color = '#808080'; // Default grey
+        if (conclusion === 'success') color = '#36a64f'; // Green
+        if (conclusion === 'failure') color = '#dc3545'; // Red
+        if (conclusion === 'cancelled') color = '#ffc107'; // Yellow/Orange
+        if (conclusion === 'timed_out') color = '#dc3545'; // Red (treat like failure)
+        if (status === 'in_progress') color = '#2c7bb6'; // Blue
+
+        // Determine title based on status/conclusion
+        let title = 'Workflow Run Update';
+        if (status === 'in_progress') {
+            title = '🚀 Workflow Run Started';
+        } else if (conclusion === 'success') {
+            title = '✅ Workflow Run Succeeded';
+        } else if (conclusion === 'failure') {
+            title = '❌ Workflow Run Failed';
+        } else if (conclusion === 'cancelled') {
+            title = '⚠️ Workflow Run Cancelled';
+        } else if (conclusion === 'timed_out') {
+            title = '⏱️ Workflow Run Timed Out';
+        }
+
+        // Use legacy attachment format (guaranteed to work with Incoming Webhooks)
+        return {
+            attachments: [
+                {
+                    color: color,
+                    fallback: `Workflow Run: ${workflow_run.name} - ${status}`,
+                    pretext: `*${title}*`,
+                    fields: [
+                        {
+                            title: "Repo",
+                            value: `<${repository.html_url}|${repository.full_name}>`,
+                            short: true
+                        },
+                        {
+                            title: "Workflow",
+                            value: workflow_run.name,
+                            short: true
+                        },
+                        {
+                            title: "Status",
+                            value: `\`${status}${conclusion ? ` - ${conclusion}` : ''}\``,
+                            short: true
+                        },
+                        {
+                            title: "Event",
+                            value: `\`${workflow_run.event}\``,
+                            short: true
+                        },
+                        {
+                            title: "Branch",
+                            value: `\`${workflow_run.head_branch}\``,
+                            short: true
+                        },
+                        {
+                            title: "Triggered by",
+                            value: sender.login,
+                            short: true
                         }
-                    },
-                    {
-                        type: "section",
-                        fields: [
-                            {
-                                type: "mrkdwn",
-                                text: `*Repo:*\n<${repository.html_url}|${repository.full_name}>`
-                            },
-                            {
-                                type: "mrkdwn",
-                                text: `*Workflow:*\n${workflow_run.name}`
-                            },
-                            {
-                                type: "mrkdwn",
-                                text: `*Status:*\n\`${status}${conclusion ? ` - ${conclusion}` : ''}\``
-                            },
-                            {
-                                type: "mrkdwn",
-                                text: `*Event:*\n\`${workflow_run.event}\``
-                            },
-                            {
-                                type: "mrkdwn",
-                                text: `*Branch:*\n\`${workflow_run.head_branch}\``
-                            },
-                            {
-                                type: "mrkdwn",
-                                text: `*Triggered by:*\n${sender.login}`
-                            }
-                        ]
-                    },
-                    {
-                        type: "actions",
-                        elements: [
-                            {
-                                type: "button",
-                                text: {
-                                    type: "plain_text",
-                                    text: "View Run",
-                                    emoji: true
-                                },
-                                url: workflow_run.html_url
-                            }
-                        ]
-                    }
-                ]
-            }
-        ]
-    };
+                    ],
+                    actions: [
+                        {
+                            type: "button",
+                            text: "View Run",
+                            url: workflow_run.html_url
+                        }
+                    ]
+                }
+            ]
+        };
+    } catch (error) {
+        console.error('[workflow_run] Error formatting message:', error.message);
+        return null; // Don't send message if formatter fails
+    }
 };
